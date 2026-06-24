@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Where Did It Go — NZ Ministerial Spend Tracker</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  --ink: #141210;
+  --paper: #f5f0e8;
+  --paper-mid: #ede7d9;
+  --paper-dark: #e0d8c8;
+  --rule: #c8bfaa;
+  --red: #b5271f;
+  --red-light: #f0dbd9;
+  --amber: #b5720a;
+  --amber-light: #f5e8cc;
+  --green: #1a5c35;
+  --green-light: #d4e8db;
+  --grey: #6b6050;
+  --nat: #00529B;
+  --act: #c8860a;
+  --nzf: #333;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--paper); color: var(--ink); font-family: 'Inter', sans-serif; min-height: 100vh; }
+
+.masthead { padding: 0 32px; border-bottom: 3px double var(--ink); }
+.masthead-top { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--rule); font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.12em; color: var(--grey); text-transform: uppercase; }
+.masthead-main { text-align: center; padding: 20px 0 16px; }
+.masthead-title { font-family: 'Playfair Display', serif; font-size: clamp(2.8rem, 7vw, 5rem); font-weight: 900; line-height: 1; letter-spacing: -0.025em; }
+.masthead-title em { font-style: italic; color: var(--red); }
+.masthead-sub { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--grey); margin-top: 8px; }
+
+.hero-strip { display: grid; grid-template-columns: repeat(4, 1fr); border-bottom: 2px solid var(--ink); }
+.hero-stat { padding: 24px 28px; border-right: 1px solid var(--rule); }
+.hero-stat:last-child { border-right: none; }
+.hero-num { font-family: 'Playfair Display', serif; font-size: clamp(1.6rem, 3vw, 2.4rem); font-weight: 900; line-height: 1; }
+.hero-num.red { color: var(--red); }
+.hero-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--grey); margin-top: 6px; }
+
+.party-totals { display: grid; grid-template-columns: repeat(3, 1fr); border-bottom: 1px solid var(--rule); }
+.party-total { padding: 16px 28px; border-right: 1px solid var(--rule); }
+.party-total:last-child { border-right: none; }
+.party-name { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 6px; }
+.party-amount { font-family: 'Playfair Display', serif; font-size: 1.4rem; font-weight: 900; }
+
+.body-wrap { display: grid; grid-template-columns: 1fr 360px; min-height: calc(100vh - 220px); }
+.main-col { border-right: 1px solid var(--rule); }
+.side-col {}
+
+.section-head { padding: 12px 28px; border-bottom: 1px solid var(--rule); display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--paper-mid); }
+.section-title { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--grey); }
+.filter-btns { display: flex; gap: 4px; flex-wrap: wrap; }
+.filter-btn { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; padding: 4px 10px; border: 1px solid var(--rule); background: transparent; color: var(--grey); cursor: pointer; transition: all 0.15s; }
+.filter-btn.active, .filter-btn:hover { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+
+.bar-legend { display: flex; gap: 20px; padding: 8px 28px; border-bottom: 1px solid var(--paper-dark); flex-wrap: wrap; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--grey); }
+.legend-swatch { width: 12px; height: 10px; }
+
+.minister-row { display: grid; grid-template-columns: 200px 1fr 110px 90px; align-items: center; gap: 10px; padding: 9px 28px; border-bottom: 1px solid var(--paper-dark); cursor: pointer; transition: background 0.1s; }
+.minister-row:hover { background: var(--paper-mid); }
+.minister-row.selected { background: var(--amber-light); }
+.m-name { font-size: 12px; font-weight: 500; color: var(--ink); line-height: 1.3; }
+.m-party-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 5px; vertical-align: middle; flex-shrink: 0; }
+.m-bar-wrap { position: relative; height: 18px; background: var(--paper-dark); }
+.m-bar-internal { position: absolute; left: 0; top: 0; bottom: 0; background: var(--ink); opacity: 0.65; transition: width 0.4s ease; }
+.m-bar-international { position: absolute; top: 0; bottom: 0; background: var(--red); opacity: 0.8; transition: width 0.4s ease, left 0.4s ease; }
+.m-total { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 500; text-align: right; }
+.verdict-badge { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 0.08em; text-transform: uppercase; padding: 3px 7px; border: 1px solid; text-align: center; white-space: nowrap; }
+.verdict-expected { color: var(--green); border-color: var(--green); background: var(--green-light); }
+.verdict-elevated { color: var(--amber); border-color: var(--amber); background: var(--amber-light); }
+.verdict-justify { color: var(--red); border-color: var(--red); background: var(--red-light); }
+
+/* sidebar */
+.side-col .section-head { padding: 12px 20px; }
+.spotlight { padding: 18px 20px; border-bottom: 1px solid var(--rule); }
+.spotlight-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--grey); margin-bottom: 10px; }
+.spotlight-name { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 700; line-height: 1.2; margin-bottom: 2px; }
+.spotlight-party { font-size: 10px; color: var(--grey); margin-bottom: 6px; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.08em; }
+.spotlight-portfolio { font-size: 11px; color: var(--ink); margin-bottom: 14px; line-height: 1.5; font-style: italic; border-left: 3px solid var(--rule); padding-left: 10px; }
+.breakdown-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; background: var(--paper-mid); border-left: 3px solid var(--rule); margin-bottom: 6px; }
+.breakdown-item.flag-red { border-left-color: var(--red); background: var(--red-light); }
+.breakdown-item.flag-amber { border-left-color: var(--amber); background: var(--amber-light); }
+.breakdown-item.flag-green { border-left-color: var(--green); background: var(--green-light); }
+.breakdown-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--grey); }
+.breakdown-val { font-family: 'Playfair Display', serif; font-size: 15px; font-weight: 700; }
+.breakdown-val.red { color: var(--red); }
+.breakdown-val.amber { color: var(--amber); }
+
+.verdict-panel { margin-top: 12px; padding: 12px; border: 1px solid var(--rule); background: white; }
+.verdict-panel-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--grey); margin-bottom: 6px; }
+.verdict-text { font-size: 12px; line-height: 1.6; color: var(--ink); }
+
+.could-buy { padding: 18px 20px; border-bottom: 1px solid var(--rule); border-top: 2px solid var(--ink); }
+.could-buy-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--grey); margin-bottom: 12px; }
+.could-buy-item { display: flex; gap: 10px; margin-bottom: 10px; align-items: flex-start; }
+.could-buy-num { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 900; color: var(--red); line-height: 1; flex-shrink: 0; min-width: 46px; }
+.could-buy-desc { font-size: 11px; color: var(--ink); line-height: 1.5; padding-top: 3px; }
+
+.q-section { padding: 0; }
+.q-table { width: 100%; border-collapse: collapse; }
+.q-table th { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--grey); padding: 8px 24px; text-align: right; border-bottom: 1px solid var(--rule); background: var(--paper-mid); font-weight: 400; }
+.q-table th:first-child { text-align: left; }
+.q-table td { font-family: 'JetBrains Mono', monospace; font-size: 11px; padding: 8px 24px; text-align: right; border-bottom: 1px solid var(--paper-dark); }
+.q-table td:first-child { text-align: left; font-size: 10px; color: var(--grey); }
+.q-table tr:hover td { background: var(--paper-mid); }
+.q-high { color: var(--red) !important; }
+.q-total td { background: var(--paper-mid); font-weight: 600; }
+
+@media (max-width: 960px) {
+  .body-wrap { grid-template-columns: 1fr; }
+  .hero-strip { grid-template-columns: repeat(2,1fr); }
+  .minister-row { grid-template-columns: 150px 1fr 90px; }
+  .minister-row .verdict-badge { display: none; }
+  .side-col { border-top: 2px solid var(--ink); }
+}
+</style>
+</head>
+<body>
+
+<div class="masthead">
+  <div class="masthead-top">
+    <span>NZ Government · Executive Expenses</span>
+    <span>Apr 2025 – Mar 2026 · Source: Dept. of Internal Affairs</span>
+    <span>30 Members · 4 Quarters</span>
+  </div>
+  <div class="masthead-main">
+    <div class="masthead-title">Where Did <em>It</em> Go?</div>
+    <div class="masthead-sub">NZ Ministerial Spend — Adjusted for Portfolio &amp; Role</div>
+  </div>
+</div>
+
+<div class="hero-strip">
+  <div class="hero-stat"><div class="hero-num red">$7.1M</div><div class="hero-label">Total spent · full year</div></div>
+  <div class="hero-stat"><div class="hero-num">$3.9M</div><div class="hero-label">Domestic &amp; internal</div></div>
+  <div class="hero-stat"><div class="hero-num red">$3.2M</div><div class="hero-label">International travel</div></div>
+  <div class="hero-stat"><div class="hero-num">$781k</div><div class="hero-label">Top spender · W. Peters</div></div>
+</div>
+
+<div class="party-totals">
+  <div class="party-total"><div class="party-name" style="color:var(--nat)">■ National</div><div class="party-amount">$5.13M</div></div>
+  <div class="party-total"><div class="party-name" style="color:var(--act)">■ ACT</div><div class="party-amount">$867k</div></div>
+  <div class="party-total"><div class="party-name" style="color:var(--nzf)">■ NZ First</div><div class="party-amount">$1.11M</div></div>
+</div>
+
+<div class="body-wrap">
+  <div class="main-col">
+    <div class="section-head">
+      <span class="section-title">Spend by minister — portfolio adjusted</span>
+      <div class="filter-btns">
+        <button class="filter-btn active" onclick="setSort('total',this)">Total</button>
+        <button class="filter-btn" onclick="setSort('international',this)">Intl</button>
+        <button class="filter-btn" onclick="setSort('internal',this)">Domestic</button>
+        <button class="filter-btn" onclick="setSort('verdict',this)">Flagged first</button>
+      </div>
+    </div>
+    <div class="bar-legend">
+      <div class="legend-item"><div class="legend-swatch" style="background:var(--ink);opacity:0.65"></div><span>Internal</span></div>
+      <div class="legend-item"><div class="legend-swatch" style="background:var(--red);opacity:0.8"></div><span>International</span></div>
+      <div class="legend-item"><div class="legend-swatch" style="background:var(--green);opacity:0.7;border:1px solid var(--green)"></div><span>Expected for role</span></div>
+      <div class="legend-item"><div class="legend-swatch" style="background:var(--amber);opacity:0.7;border:1px solid var(--amber)"></div><span>Slightly elevated</span></div>
+      <div class="legend-item"><div class="legend-swatch" style="background:var(--red);opacity:0.7;border:1px solid var(--red)"></div><span>Hard to justify</span></div>
+    </div>
+    <div id="minister-list"></div>
+
+    <div class="section-head"><span class="section-title">Quarter by quarter totals</span></div>
+    <div class="q-section">
+      <table class="q-table">
+        <thead><tr><th>Quarter</th><th>Internal</th><th>International</th><th>Total</th></tr></thead>
+        <tbody>
+          <tr><td>Apr–Jun 2025</td><td>$994,314</td><td class="q-high">$839,560</td><td>$1,833,874</td></tr>
+          <tr><td>Jul–Sep 2025</td><td>$989,903</td><td class="q-high">$917,166</td><td>$1,907,069</td></tr>
+          <tr><td>Oct–Dec 2025</td><td>$993,879</td><td>$821,511</td><td>$1,815,390</td></tr>
+          <tr><td>Jan–Mar 2026</td><td>$926,091</td><td>$615,628</td><td>$1,541,719</td></tr>
+          <tr class="q-total"><td>Full Year</td><td>$3,904,187</td><td class="q-high">$3,193,865</td><td class="q-high">$7,098,052</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="side-col">
+    <div class="section-head"><span class="section-title">Minister spotlight</span></div>
+    <div class="spotlight" id="spotlight"><div class="spotlight-label">Click any minister to inspect</div></div>
+    <div class="could-buy" id="could-buy"></div>
+  </div>
+</div>
+
+<script>
+// Travel expectation levels per portfolio
+// high = role requires significant international travel by nature
+// medium = some expected, but not dominant
+// low = little to no international travel justified
+
+const MINISTERS = [
+  {
+    name: "Rt Hon Winston Peters", party: "NZ First", internal: 62470, international: 718532,
+    portfolios: "Deputy PM · Foreign Affairs · Racing",
+    travelExpect: "high",
+    verdictNote: "Foreign Affairs demands international travel — but $718k is exceptional even for this role. Nearly 92% of total spend was overseas, making him the highest international spender by a wide margin."
+  },
+  {
+    name: "Hon Todd McClay", party: "National", internal: 198687, international: 525112,
+    portfolios: "Agriculture · Trade · Forestry",
+    travelExpect: "high",
+    verdictNote: "Trade is one of NZ's most internationally active portfolios. McClay signed the India FTA and conducted numerous bilateral trade missions. High spend is largely consistent with role demands."
+  },
+  {
+    name: "Rt Hon Christopher Luxon", party: "National", internal: 161326, international: 374124,
+    portfolios: "Prime Minister · National Security",
+    travelExpect: "high",
+    verdictNote: "As PM, international representation is a core function. Visits to Australia, Singapore, Pacific nations and multilateral forums account for the bulk of spend. Consistent with the role."
+  },
+  {
+    name: "Hon Judith Collins KC", party: "National", internal: 137753, international: 285878,
+    portfolios: "Defence · GCSB · NZSIS · Space",
+    travelExpect: "high",
+    verdictNote: "Defence and intelligence portfolios carry significant international obligations — Five Eyes meetings, AUKUS adjacent engagements, and bilateral defence talks. Spend is elevated but explicable."
+  },
+  {
+    name: "Hon Shane Jones", party: "NZ First", internal: 184794, international: 118454,
+    portfolios: "Regional Development · Forestry · Resources",
+    travelExpect: "low",
+    verdictNote: "Regional Development is a domestically focused portfolio. $118k in international travel is harder to justify on portfolio grounds alone. Shane Jones is known for active travel as a senior NZ First minister."
+  },
+  {
+    name: "Hon Erica Stanford", party: "National", internal: 159520, international: 139202,
+    portfolios: "Education · Immigration",
+    travelExpect: "medium",
+    verdictNote: "Immigration has some international dimension (visa policy, international agreements), but $139k overseas is at the higher end for an Education-focused minister. Slightly elevated relative to portfolio."
+  },
+  {
+    name: "Hon Simon Watts", party: "National", internal: 127715, international: 141911,
+    portfolios: "Climate Change · Revenue · Associate Finance",
+    travelExpect: "medium",
+    verdictNote: "Climate Change involves international treaty negotiations and COP engagements, which can justify overseas spend. $141k is elevated but not without basis given NZ's active climate diplomacy."
+  },
+  {
+    name: "Hon Louise Upston", party: "National", internal: 191990, international: 77211,
+    portfolios: "Social Development · Employment · Leader of the House",
+    travelExpect: "low",
+    verdictNote: "Social Development and Employment are almost entirely domestic portfolios. $77k in international travel is difficult to justify on portfolio grounds — one of the stronger anomalies in the data."
+  },
+  {
+    name: "Hon Chris Bishop", party: "National", internal: 107257, international: 146784,
+    portfolios: "Housing · Transport · Infrastructure · RMA Reform · Attorney-General",
+    travelExpect: "low",
+    verdictNote: "Housing and infrastructure are domestic portfolios. $146k in international travel is hard to account for through portfolio alone. Bishop held some of the heaviest domestic reform workloads in Cabinet."
+  },
+  {
+    name: "Hon Dr Shane Reti", party: "National", internal: 145267, international: 95387,
+    portfolios: "Health · Pacific Peoples",
+    travelExpect: "medium",
+    verdictNote: "Pacific Peoples involves regional Pacific engagement which can require travel. Health also has some WHO-level international involvement. Spend is within a reasonable range for these portfolios."
+  },
+  {
+    name: "Hon Mark Mitchell", party: "National", internal: 133803, international: 49210,
+    portfolios: "Police · Corrections",
+    travelExpect: "low",
+    verdictNote: "Police and Corrections are almost entirely domestic. $49k in international travel is modest but still warrants scrutiny — likely some Five Eyes law enforcement engagement."
+  },
+  {
+    name: "Hon Simeon Brown", party: "National", internal: 176657, international: 6344,
+    portfolios: "Energy · Auckland · Local Government",
+    travelExpect: "low",
+    verdictNote: "Predominantly domestic portfolios. Minimal international spend — consistent with role. One of the more fiscally restrained profiles in the dataset."
+  },
+  {
+    name: "Hon Tama Potaka", party: "National", internal: 151918, international: 38017,
+    portfolios: "Conservation · Māori Crown Relations · Forestry",
+    travelExpect: "low",
+    verdictNote: "Conservation has some international treaty obligations (biodiversity agreements, Antarctic Treaty). $38k overseas is modest and not unreasonable."
+  },
+  {
+    name: "Hon Matt Doocey", party: "National", internal: 155724, international: 4810,
+    portfolios: "Mental Health · Addiction · Associate Health",
+    travelExpect: "low",
+    verdictNote: "Mental health is a domestic portfolio. Very minimal international spend — among the most restrained in Cabinet. Consistent with role."
+  },
+  {
+    name: "Hon James Meager", party: "National", internal: 174397, international: 0,
+    portfolios: "Hunting & Fishing · Associate Agriculture · Associate Forestry",
+    travelExpect: "low",
+    verdictNote: "Entirely domestic portfolio. Zero international spend — the only minister in the dataset with no overseas expenditure. Fully consistent with role."
+  },
+  {
+    name: "Hon Casey Costello", party: "NZ First", internal: 127619, international: 105670,
+    portfolios: "Customs · Associate Health · Associate Immigration",
+    travelExpect: "medium",
+    verdictNote: "Customs has genuine international dimension — border cooperation, WCO engagement, drug trafficking partnerships. $105k is on the high side but not without justification."
+  },
+  {
+    name: "Hon Paul Goldsmith", party: "National", internal: 134475, international: 46524,
+    portfolios: "Arts Culture & Heritage · Tourism · Pacific Peoples · Public Service",
+    travelExpect: "medium",
+    verdictNote: "Tourism involves some international promotion work. Pacific Peoples has a regional travel dimension. Spend is reasonable relative to portfolio mix."
+  },
+  {
+    name: "Hon Mark Patterson", party: "NZ First", internal: 152468, international: 10210,
+    portfolios: "Rural Communities · Associate Agriculture · Associate Forestry",
+    travelExpect: "low",
+    verdictNote: "Rural Communities is a domestic portfolio. Minimal international spend — appropriate for the role."
+  },
+  {
+    name: "Hon Chris Penk", party: "National", internal: 129289, international: 71586,
+    portfolios: "Defence · GCSB · NZSIS · Space · Building & Construction",
+    travelExpect: "high",
+    verdictNote: "Penk picked up Defence mid-period (April 2026 reshuffle). During the expense period he held Building & Construction — a domestic role. The $71k international may relate to earlier portfolio work."
+  },
+  {
+    name: "Hon David Seymour", party: "ACT", internal: 148343, international: 1794,
+    portfolios: "Deputy PM · Regulation · ACT Party Leader",
+    travelExpect: "low",
+    verdictNote: "Regulation is a domestic portfolio. Minimal international spend — among the lowest in Cabinet for someone of his seniority. Consistent with role focus."
+  },
+  {
+    name: "Hon Karen Chhour", party: "ACT", internal: 117387, international: 19626,
+    portfolios: "Children · Associate Social Development",
+    travelExpect: "low",
+    verdictNote: "Children is a domestic portfolio. $19k internationally is modest but slightly elevated for this role — could reflect UNICEF or Pacific child welfare engagement."
+  },
+  {
+    name: "Hon Brooke van Velden", party: "ACT", internal: 106003, international: 0,
+    portfolios: "Internal Affairs · Workplace Relations & Safety · Associate Finance",
+    travelExpect: "low",
+    verdictNote: "Domestic portfolios. Zero international spend — appropriate for the role and consistent with ACT's stated fiscal approach."
+  },
+  {
+    name: "Hon Nicola Willis", party: "National", internal: 85251, international: 129756,
+    portfolios: "Finance · Economic Growth",
+    travelExpect: "high",
+    verdictNote: "Finance involves IMF, OECD, and bilateral economic engagements. $129k internationally is high but defensible for a Finance Minister attending major international economic forums."
+  },
+  {
+    name: "Jenny Marcroft MP", party: "NZ First", internal: 107767, international: 1621,
+    portfolios: "Associate Education · Associate Immigration",
+    travelExpect: "low",
+    verdictNote: "Associate portfolios with limited international scope. Minimal overseas spend — appropriate."
+  },
+  {
+    name: "Simon Court MP", party: "ACT", internal: 102048, international: 7701,
+    portfolios: "Associate Energy · Associate Infrastructure",
+    travelExpect: "low",
+    verdictNote: "Associate portfolios, primarily domestic. Modest international spend — within acceptable range."
+  },
+  {
+    name: "Hon Scott Simpson", party: "National", internal: 89114, international: 21266,
+    portfolios: "Statistics · ACC · Associate Finance",
+    travelExpect: "low",
+    verdictNote: "Statistics and ACC are domestic. $21k overseas is modest — possibly UN statistical commission or similar. Not a major concern."
+  },
+  {
+    name: "Hon Andrew Hoggard", party: "ACT", internal: 85008, international: 29248,
+    portfolios: "Biosecurity · Agriculture · Food Safety",
+    travelExpect: "medium",
+    verdictNote: "Biosecurity involves international border and treaty work. Agriculture has trade dimensions. $29k internationally is reasonable for these portfolios."
+  },
+  {
+    name: "Hon Penny Simmonds", party: "National", internal: 84973, international: 0,
+    portfolios: "Tertiary Education · Science Innovation & Technology · Environment",
+    travelExpect: "low",
+    verdictNote: "Domestic portfolios. Zero international spend during the expense period — consistent with role. Note she was outside Cabinet for much of this period."
+  },
+  {
+    name: "Hon Nicola Grigg", party: "National", internal: 73663, international: 27831,
+    portfolios: "Environment · Associate Agriculture",
+    travelExpect: "medium",
+    verdictNote: "Environment involves COP and international treaty obligations. $27k internationally is modest and defensible given the portfolio."
+  },
+  {
+    name: "Hon Nicole McKee", party: "ACT", internal: 50914, international: 0,
+    portfolios: "Courts · Associate Justice · Associate Police",
+    travelExpect: "low",
+    verdictNote: "Courts and Justice are domestic. Zero international spend — appropriate for the role."
+  },
+];
+
+// Verdict logic: high expect = up to $300k intl is fine; medium = up to $80k; low = up to $30k
+function getVerdict(m) {
+  const intl = m.international;
+  if (m.travelExpect === "high") {
+    if (intl < 200000) return "expected";
+    if (intl < 500000) return "elevated";
+    return "justify";
+  }
+  if (m.travelExpect === "medium") {
+    if (intl < 80000) return "expected";
+    if (intl < 160000) return "elevated";
+    return "justify";
+  }
+  // low
+  if (intl < 30000) return "expected";
+  if (intl < 80000) return "elevated";
+  return "justify";
+}
+
+const VERDICT_SCORE = { justify: 0, elevated: 1, expected: 2 };
+const PARTY_COLORS = { National: "#00529B", ACT: "#c8860a", "NZ First": "#333" };
+
+let sortMode = "total";
+let selectedIdx = 0;
+
+function fmt(n) {
+  if (n >= 1000000) return "$" + (n / 1000000).toFixed(2) + "M";
+  if (n >= 1000) return "$" + Math.round(n / 1000) + "k";
+  return "$" + n.toLocaleString();
+}
+
+function setSort(mode, btn) {
+  sortMode = mode;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderList();
+}
+
+function getSorted() {
+  return [...MINISTERS].map((m, i) => ({ ...m, _origIdx: i, _verdict: getVerdict(m) })).sort((a, b) => {
+    if (sortMode === "total") return (b.internal + b.international) - (a.internal + a.international);
+    if (sortMode === "international") return b.international - a.international;
+    if (sortMode === "internal") return b.internal - a.internal;
+    if (sortMode === "verdict") return VERDICT_SCORE[a._verdict] - VERDICT_SCORE[b._verdict];
+  });
+}
+
+function renderList() {
+  const sorted = getSorted();
+  const maxVal = Math.max(...MINISTERS.map(m => m.internal + m.international));
+  const list = document.getElementById('minister-list');
+  list.innerHTML = '';
+
+  sorted.forEach((m) => {
+    const total = m.internal + m.international;
+    const internalPct = (m.internal / maxVal) * 100;
+    const intlPct = (m.international / maxVal) * 100;
+    const verdict = m._verdict;
+    const badgeClass = verdict === 'expected' ? 'verdict-expected' : verdict === 'elevated' ? 'verdict-elevated' : 'verdict-justify';
+    const badgeLabel = verdict === 'expected' ? 'Expected' : verdict === 'elevated' ? 'Elevated' : 'Scrutiny';
+    const isSelected = m.name === MINISTERS[selectedIdx].name;
+
+    const row = document.createElement('div');
+    row.className = 'minister-row' + (isSelected ? ' selected' : '');
+    row.innerHTML = `
+      <div class="m-name">
+        <span class="m-party-dot" style="background:${PARTY_COLORS[m.party]}"></span>${m.name.replace('Rt Hon ', '').replace('Hon ', '')}
+      </div>
+      <div class="m-bar-wrap">
+        <div class="m-bar-internal" style="width:${internalPct}%"></div>
+        <div class="m-bar-international" style="left:${internalPct}%;width:${intlPct}%"></div>
+      </div>
+      <div class="m-total" style="color:${verdict==='justify'?'var(--red)':verdict==='elevated'?'var(--amber)':'var(--ink)'}">${fmt(total)}</div>
+      <div class="verdict-badge ${badgeClass}">${badgeLabel}</div>
+    `;
+    row.addEventListener('click', () => {
+      selectedIdx = MINISTERS.findIndex(x => x.name === m.name);
+      renderList();
+      renderSpotlight(MINISTERS[selectedIdx]);
+    });
+    list.appendChild(row);
+  });
+}
+
+function renderSpotlight(m) {
+  const total = m.internal + m.international;
+  const verdict = getVerdict(m);
+  const flagClass = verdict === 'justify' ? 'flag-red' : verdict === 'elevated' ? 'flag-amber' : 'flag-green';
+  const verdictLabel = verdict === 'expected' ? 'Expected for role' : verdict === 'elevated' ? 'Slightly elevated' : 'Hard to justify';
+
+  document.getElementById('spotlight').innerHTML = `
+    <div class="spotlight-label">Minister spotlight</div>
+    <div class="spotlight-name">${m.name}</div>
+    <div class="spotlight-party" style="color:${PARTY_COLORS[m.party]}">${m.party}</div>
+    <div class="spotlight-portfolio">${m.portfolios}</div>
+    <div class="breakdown-item">
+      <span class="breakdown-label">Internal costs</span>
+      <span class="breakdown-val">$${m.internal.toLocaleString()}</span>
+    </div>
+    <div class="breakdown-item ${m.international > 100000 ? 'flag-red' : m.international > 40000 ? 'flag-amber' : ''}">
+      <span class="breakdown-label">International</span>
+      <span class="breakdown-val ${m.international > 100000 ? 'red' : m.international > 40000 ? 'amber' : ''}">$${m.international.toLocaleString()}</span>
+    </div>
+    <div class="breakdown-item ${flagClass}">
+      <span class="breakdown-label">Full year total</span>
+      <span class="breakdown-val ${verdict==='justify'?'red':verdict==='elevated'?'amber':''}">$${total.toLocaleString()}</span>
+    </div>
+    <div class="verdict-panel">
+      <div class="verdict-panel-label">Portfolio assessment · ${verdictLabel}</div>
+      <div class="verdict-text">${m.verdictNote}</div>
+    </div>
+  `;
+
+  document.getElementById('could-buy').innerHTML = `
+    <div class="could-buy-label">$${total.toLocaleString()} could instead fund...</div>
+    <div class="could-buy-item">
+      <div class="could-buy-num">${Math.floor(total / 75000) || '<1'}</div>
+      <div class="could-buy-desc">NZ registered nurses for one full year</div>
+    </div>
+    <div class="could-buy-item">
+      <div class="could-buy-num">${Math.floor(total / 7500)}</div>
+      <div class="could-buy-desc">student tertiary fees paid in full</div>
+    </div>
+    <div class="could-buy-item">
+      <div class="could-buy-num">${Math.floor(total / 2200)}</div>
+      <div class="could-buy-desc">return flights Auckland to London</div>
+    </div>
+  `;
+}
+
+renderList();
+renderSpotlight(MINISTERS[0]);
+</script>
+</body>
+</html>
